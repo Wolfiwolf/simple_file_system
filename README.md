@@ -48,7 +48,7 @@ After deleting one or more files, you have to call the defragmentation function 
 
 ### Usage for SD card on MCU
 
-If you are using this filesystem for an SD card with a MCU, I have also put the driver code for a SD card into the sd_card_driver folder. All you have to do, is implement the following functions.
+If you are using this filesystem for an SD card with a MCU, I have also put the driver code for a SD card into the sd_card_driver folder. The code is a slightly modified version of the one from controllers tech. All you have to do, is implement the following functions.
 
 ```c
 
