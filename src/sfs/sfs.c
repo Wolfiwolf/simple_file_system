@@ -85,7 +85,6 @@ void SFS_print_files() {
 }
 
 void SFS_init() {
-	SDCard_init();
 	SDCard_read_page(0, _page);
 	memcpy(&_num_of_pages, _page, 4);
 

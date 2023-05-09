@@ -3,6 +3,9 @@
 #include "sfs/sfs.h"
 
 int main(int argc, char *argv[]) {
+	SDCard_init();
+
+	SFS_init();
 
 	return 0;
 }
