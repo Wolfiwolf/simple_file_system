@@ -18,7 +18,6 @@ static void write_page(uint32_t page_address, uint8_t *buffer) {
 	SDCard_write_page(page_address, buffer);
 }
 
-
 struct BlockMetaData {
 	uint32_t page;
 	uint32_t owner;
@@ -51,52 +50,6 @@ static uint32_t _num_of_pages;
 static struct FileMetaData _files[16];
 static uint32_t _num_of_files;
 
-void SFS_print_pages() {
-	printf("######### PAGES (%d) ##########\n", _num_of_pages);
-	uint32_t meta_count = 0;
-	uint32_t page_index = SFS_META_BLOCKS_START;
-	for (; ;) {
-		read_page(page_index, _page);
-		struct BlockMetaData meta_data;
-
-		bool is_over = false;
-		for (uint16_t j = 0; j < 512; ) {
-			if (meta_count == _num_of_pages) {
-				is_over = true;
-				break;
-			}
-
-			memcpy(&meta_data.page, _page + j, 4);
-			j += 4;
-			memcpy(&meta_data.owner, _page + j, 4);
-			j += 4;
-			memcpy(&meta_data.size_taken, _page + j, 4);
-			j += 4;
-			memcpy(&meta_data.crc, _page + j, 4);
-			j += 4;
-
-
-			printf("-------%d------\n", meta_count);
-			printf("page: %d\nowner: %d\nsize_taken: %d\n", meta_data.page, meta_data.owner, meta_data.size_taken);
-			meta_count++;
-
-		}
-		page_index++;
-
-		if (is_over) break;
-	}
-}
-
-void SFS_print_files() {
-	printf("######### FILES:\n");
-	for (uint8_t k = 0; k < _num_of_files; ++k) {
-		printf("--------\n");
-		printf("owner: %d\n", _files[k].owner);
-		printf("offset: %d\n", _files[k].offset);
-		printf("last_page: %d\n", _files[k].last_page);
-		printf("size: %d\n", (uint32_t)_files[k].size);
-	}
-}
 
 void SFS_init() {
 	read_page(0, _page);

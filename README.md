@@ -19,6 +19,33 @@ static void read_page(uint32_t page_address, uint8_t *buffer);
 static void write_page(uint32_t page_address, uint8_t *buffer);
 ```
 
+This filesystem segments the memory into 3 parts. The first part is the storage info, where all the main data of the storage is saved. The second part is the page metadata partition where the ownerships of the pages is written. The last part is the data part, here all the data is stored.
+
+The basic program look something like this.
+
+```c
+SDCard_init();
+
+SFS_init();
+
+SFS_create("test");
+
+uint8_t data[8];
+for (uint8_t i = 0; i < 8; ++i) data[i] = i;
+
+SFS_write("test", data, 8);
+
+uint8_t read_data[8];
+SFS_read("test", data, 8, 0);
+
+
+SFS_delete("test");
+SFS_defragment();
+```
+
+After deleting the file, the memory is cleared only after the defragmentation step.
+
+
 ## Running the example
 To run the example you just run the following commands:
 ```bash
