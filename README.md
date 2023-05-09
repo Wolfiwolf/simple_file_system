@@ -6,6 +6,7 @@ The code is not fully optimized and despite the testing there can be bugs. If th
 
 ## Instructions
 
+### Usage
 All you have to do is implement the next functions:
 ```c
 // This function must read the 512 byte page on the specified page address.
@@ -43,8 +44,14 @@ SFS_delete("test");
 SFS_defragment();
 ```
 
-After deleting the file, the memory is cleared only after the defragmentation step.
+After deleting one or more files, you have to call the defragmentation function to clear the memory and gain more space. The deleting and defragmentation functions are separete so you can delete multiple files and call the defragmentation function when it is not time critical.
 
+### Usage for SD card on MCU
+
+If you are using this filesystem for an MCU, I have also put the driver code for a SD card into the sd_card_driver folder. All you have to do, is implement the following functions.
+
+```c
+```
 
 ## Running the example
 To run the example you just run the following commands:
