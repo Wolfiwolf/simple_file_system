@@ -30,37 +30,37 @@ you can play around with the library by trying out different use cases in the ma
 
 ## API
 
+This function initializes the filesystem and reads the file and pages metadata.
 ```c
 void SFS_init();
 ```
-This function initializes the filesystem and reads the file and pages metadata.
 
+With this function you can create a file in the filesystem.
 ```c
 void SFS_create(const char *file_name);
 ```
-With this function you can create a file in the filesystem.
 
+This function deletes the file from the system.
 ```c
 void SFS_delete(const char *file_name);
 ```
-This function deletes the file from the system.
 
+This function returns the size of a file.
 ```c
 uint64_t SFS_size(const char *file_name);
 ```
-This function returns the size of a file.
 
+This function is used to write to a file.
 ```c
 void SFS_write(const char *file_name, uint8_t *buffer, uint32_t data_len);
 ```
-This function is used to write to a file.
 
+This function is used to read from a file at specified offset.
 ```c
 void SFS_read(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_t offset);
 ```
-This function is used to read from a file.
 
+This function defragments the storage device. It is wise to run it if running out of space or when there is time after a file delete.
 ```c
 void SFS_defragment();
 ```
-This function defragments the storage device. It is wise to run it if running out of space or when there is time after a file delete.
