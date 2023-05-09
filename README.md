@@ -16,5 +16,10 @@ static void read_page(uint32_t page_address, uint8_t *buffer);
 static void read_page(uint32_t page_address, uint8_t *buffer);
 ```
 
-## Usage Example
-There is an example program in the example folder.
+## Running the example
+To run the example you just run the following commands:
+```bash
+make
+./sfs_example
+```
+
