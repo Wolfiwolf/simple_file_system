@@ -4,6 +4,20 @@
 #include <stdbool.h>
 #include "sd_card/sd_card.h"
 
+// This function must read the 512 byte page on the specified page address.
+// If your storage device does not have pages you can simulate them by 
+// reading 512 bytes from the address page_address * 512.
+static void read_page(uint32_t page_address, uint8_t *buffer) {
+	SDCard_read_page(page_address, buffer);
+}
+
+// This function must write the 512 byte page on the specified page address.
+// If your storage device does not have pages you can simulate them by 
+// writing 512 bytes to the address page_address * 512.
+static void write_page(uint32_t page_address, uint8_t *buffer) {
+	SDCard_write_page(page_address, buffer);
+}
+
 
 struct BlockMetaData {
 	uint32_t page;
@@ -42,7 +56,7 @@ void SFS_print_pages() {
 	uint32_t meta_count = 0;
 	uint32_t page_index = SFS_META_BLOCKS_START;
 	for (; ;) {
-		SDCard_read_page(page_index, _page);
+		read_page(page_index, _page);
 		struct BlockMetaData meta_data;
 
 		bool is_over = false;
@@ -85,7 +99,7 @@ void SFS_print_files() {
 }
 
 void SFS_init() {
-	SDCard_read_page(0, _page);
+	read_page(0, _page);
 	memcpy(&_num_of_pages, _page, 4);
 
 	_num_of_files = 0;
@@ -93,7 +107,7 @@ void SFS_init() {
 	uint32_t meta_count = 0;
 	uint32_t page_index = SFS_META_BLOCKS_START;
 	for (; ;) {
-		SDCard_read_page(page_index, _page);
+		read_page(page_index, _page);
 		struct BlockMetaData meta_data;
 
 		bool is_over = false;
@@ -155,7 +169,7 @@ void SFS_delete(const char *file_name) {
 	uint32_t meta_count = 0;
 	uint32_t page_index = SFS_META_BLOCKS_START;
 	for (; ;) {
-		SDCard_read_page(page_index, _page);
+		read_page(page_index, _page);
 		struct BlockMetaData meta_data;
 
 		bool is_over = false;
@@ -216,30 +230,30 @@ void SFS_write(const char *file_name, uint8_t *buffer, uint32_t data_len) {
 		uint32_t num_of_middle_parts = (offset + data_len) / SFS_PAGE_SIZE - 1;
 
 
-		SDCard_read_page(SFS_DATA_BLOCKS_START +  page, _page);
+		read_page(SFS_DATA_BLOCKS_START +  page, _page);
 		memcpy(_page + offset, buffer, fist_part_size);
-		SDCard_write_page(SFS_DATA_BLOCKS_START +  page, _page);
+		write_page(SFS_DATA_BLOCKS_START +  page, _page);
 		set_page_size_taken(page, 512);
 
 		for (uint32_t i = 0; i < num_of_middle_parts; ++i) {
 			page = get_new_page(owner, 512);
-			SDCard_read_page(SFS_DATA_BLOCKS_START +  page, _page);
+			read_page(SFS_DATA_BLOCKS_START +  page, _page);
 			memcpy(_page, buffer + fist_part_size + i * SFS_PAGE_SIZE, SFS_PAGE_SIZE);
-			SDCard_write_page(SFS_DATA_BLOCKS_START +  page, _page);
+			write_page(SFS_DATA_BLOCKS_START +  page, _page);
 		}
 
 		page = get_new_page(owner, last_part_size);
-		SDCard_read_page(SFS_DATA_BLOCKS_START +  page, _page);
+		read_page(SFS_DATA_BLOCKS_START +  page, _page);
 		memcpy(_page, buffer + fist_part_size + num_of_middle_parts * SFS_PAGE_SIZE, last_part_size);
-		SDCard_write_page(SFS_DATA_BLOCKS_START +  page, _page);
+		write_page(SFS_DATA_BLOCKS_START +  page, _page);
 
 		_files[file_index].last_page = page;
 		_files[file_index].offset = last_part_size;
 
 	} else {
-		SDCard_read_page(SFS_DATA_BLOCKS_START + page, _page);
+		read_page(SFS_DATA_BLOCKS_START + page, _page);
 		memcpy(_page + offset, buffer, data_len);
-		SDCard_write_page(SFS_DATA_BLOCKS_START + page, _page);
+		write_page(SFS_DATA_BLOCKS_START + page, _page);
 
 		set_page_size_taken(page, offset + data_len);
 
@@ -288,7 +302,7 @@ void SFS_read(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_
 	uint32_t meta_count = 0;
 	uint32_t page_index = SFS_META_BLOCKS_START;
 	for (; ;) {
-		SDCard_read_page(page_index, _page);
+		read_page(page_index, _page);
 		struct BlockMetaData meta_data;
 
 		bool is_over = false;
@@ -310,7 +324,7 @@ void SFS_read(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_
 
 			if (meta_data.owner == owner) {
 				if (file_page_count == first_page) {
-					SDCard_read_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
+					read_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
 					memcpy(buffer, reading_page + first_page_offset, first_page_size);
 					if (num_of_middle_pages == 0) {
 						is_over = true;
@@ -318,12 +332,12 @@ void SFS_read(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_
 						start_middle = true;
 					}
 				} else if (file_page_count == last_page) {
-					SDCard_read_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
+					read_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
 					memcpy(buffer + first_page_size + middle_count * SFS_PAGE_SIZE, reading_page, last_page_size);
 					start_middle = false;
 					is_over = true;
 				} else if (start_middle) {
-					SDCard_read_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
+					read_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
 					memcpy(buffer + first_page_size + middle_count * SFS_PAGE_SIZE, reading_page, SFS_PAGE_SIZE);
 					middle_count++;
 				}
@@ -342,7 +356,7 @@ void SFS_defragment() {
 	uint32_t meta_count = 0;
 	uint32_t page_index = SFS_META_BLOCKS_START;
 	for (; ;) {
-		SDCard_read_page(page_index, _page);
+		read_page(page_index, _page);
 		struct BlockMetaData meta_data;
 
 		bool is_over = false;
@@ -373,7 +387,7 @@ void SFS_defragment() {
 				}
 
 				move_page(next_page, meta_data.page);
-				SDCard_read_page(page_index, _page);
+				read_page(page_index, _page);
 			}
 
 		}
@@ -406,7 +420,7 @@ static uint32_t get_new_page(uint32_t owner, uint32_t size_taken) {
 	uint32_t meta_page = (_num_of_pages * SFS_META_DATA_SIZE) / SFS_PAGE_SIZE;
 	uint32_t meta_offset = (_num_of_pages * SFS_META_DATA_SIZE) % SFS_PAGE_SIZE;
 
-	SDCard_read_page(SFS_META_BLOCKS_START + meta_page, _page);
+	read_page(SFS_META_BLOCKS_START + meta_page, _page);
 
 	memcpy(_page + meta_offset, &meta_data.page, 4);
 	meta_offset += 4;
@@ -414,14 +428,14 @@ static uint32_t get_new_page(uint32_t owner, uint32_t size_taken) {
 	meta_offset += 4;
 	memcpy(_page + meta_offset, &meta_data.size_taken, 4);
 
-	SDCard_write_page(SFS_META_BLOCKS_START + meta_page, _page);
+	write_page(SFS_META_BLOCKS_START + meta_page, _page);
 
 
 	_num_of_pages++;
 
-	SDCard_read_page(0, _page);
+	read_page(0, _page);
 	memcpy(_page, &_num_of_pages, 4);
-	SDCard_write_page(0, _page);
+	write_page(0, _page);
 
 	return meta_data.page;
 }
@@ -429,7 +443,7 @@ static uint32_t get_new_page(uint32_t owner, uint32_t size_taken) {
 static void set_page_size_taken(uint32_t page, uint32_t size_taken) {
 	uint32_t meta_page = (page * SFS_META_DATA_SIZE) / SFS_PAGE_SIZE;
 	uint32_t meta_offset = (page * SFS_META_DATA_SIZE) % SFS_PAGE_SIZE;
-	SDCard_read_page(SFS_META_BLOCKS_START + meta_page, _page);
+	read_page(SFS_META_BLOCKS_START + meta_page, _page);
 
 
 	uint32_t temp_size_taken = 0;
@@ -438,26 +452,26 @@ static void set_page_size_taken(uint32_t page, uint32_t size_taken) {
 	memcpy(_page + meta_offset, &size_taken, 4);
 
 
-	SDCard_write_page(SFS_META_BLOCKS_START + meta_page, _page);
+	write_page(SFS_META_BLOCKS_START + meta_page, _page);
 }
 
 static void delete_page(uint32_t page) {
 	uint32_t meta_page = (page * SFS_META_DATA_SIZE) / SFS_PAGE_SIZE;
 	uint32_t meta_offset = (page * SFS_META_DATA_SIZE) % SFS_PAGE_SIZE;
-	SDCard_read_page(SFS_META_BLOCKS_START + meta_page, _page);
+	read_page(SFS_META_BLOCKS_START + meta_page, _page);
 
 	uint32_t owner = 0;
 	meta_offset += 4;
 	memcpy(_page + meta_offset, &owner, 4);
 
-	SDCard_write_page(SFS_META_BLOCKS_START + meta_page, _page);
+	write_page(SFS_META_BLOCKS_START + meta_page, _page);
 }
 
 static void move_page(uint32_t src_page, uint32_t dest_page) {
 	uint32_t meta_page = (src_page * SFS_META_DATA_SIZE) / SFS_PAGE_SIZE;
 	uint32_t meta_offset = (src_page * SFS_META_DATA_SIZE) % SFS_PAGE_SIZE;
 
-	SDCard_read_page(SFS_META_BLOCKS_START + meta_page, _page);
+	read_page(SFS_META_BLOCKS_START + meta_page, _page);
 
 	struct BlockMetaData meta_data;
 
@@ -474,7 +488,7 @@ static void move_page(uint32_t src_page, uint32_t dest_page) {
 	meta_page = (dest_page * SFS_META_DATA_SIZE) / SFS_PAGE_SIZE;
 	meta_offset = (dest_page * SFS_META_DATA_SIZE) % SFS_PAGE_SIZE;
 
-	SDCard_read_page(SFS_META_BLOCKS_START + meta_page, _page);
+	read_page(SFS_META_BLOCKS_START + meta_page, _page);
 
 	memcpy(_page + meta_offset, &dest_page, 4);
 	meta_offset += 4;
@@ -484,10 +498,10 @@ static void move_page(uint32_t src_page, uint32_t dest_page) {
 	meta_offset += 4;
 	memcpy(_page + meta_offset, &meta_data.crc, 4);
 
-	SDCard_write_page(SFS_META_BLOCKS_START + meta_page, _page);
+	write_page(SFS_META_BLOCKS_START + meta_page, _page);
 
-	SDCard_read_page(SFS_DATA_BLOCKS_START + src_page, _page);
-	SDCard_write_page(SFS_DATA_BLOCKS_START + dest_page, _page);
+	read_page(SFS_DATA_BLOCKS_START + src_page, _page);
+	write_page(SFS_DATA_BLOCKS_START + dest_page, _page);
 }
 
 static uint32_t get_next_taken_page(uint32_t start_page) {
@@ -498,7 +512,7 @@ static uint32_t get_next_taken_page(uint32_t start_page) {
 	uint32_t meta_count = start_page;
 	uint32_t page_index = SFS_META_BLOCKS_START + meta_page;
 	for (; ;) {
-		SDCard_read_page(page_index, _page);
+		read_page(page_index, _page);
 		struct BlockMetaData meta_data;
 
 		bool is_over = false;

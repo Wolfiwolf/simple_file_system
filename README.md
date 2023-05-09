@@ -16,7 +16,7 @@ static void read_page(uint32_t page_address, uint8_t *buffer);
 // This function must write the 512 byte page on the specified page address.
 // If your storage device does not have pages you can simulate them by 
 // writing 512 bytes to the address page_address * 512.
-static void read_page(uint32_t page_address, uint8_t *buffer);
+static void write_page(uint32_t page_address, uint8_t *buffer);
 ```
 
 ## Running the example
