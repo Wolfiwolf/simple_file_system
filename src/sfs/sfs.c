@@ -52,6 +52,13 @@ static uint32_t _num_of_files;
 
 
 void SFS_init() {
+	{
+		uint8_t buff[512];
+		for (uint16_t i = 0; i < 512; ++i) {
+			buff[i] = 0;
+		}
+		// write_page(0, buff);
+	}
 	read_page(0, _page);
 	memcpy(&_num_of_pages, _page, 4);
 
@@ -77,8 +84,9 @@ void SFS_init() {
 			j += 4;
 			memcpy(&meta_data.crc, _page + j, 4);
 			j += 4;
-			meta_count++;
 
+			if (meta_data.owner == 0) continue;
+			meta_count++;
 
 
 			bool file_exists = false;
@@ -119,6 +127,27 @@ void SFS_create(const char *file_name) {
 void SFS_delete(const char *file_name) {
 	uint32_t owner = file_name_to_owner(file_name);
 
+	uint8_t file_index = 0;
+	for (uint8_t i = 0; i < _num_of_files; ++i) {
+		if (_files[i].owner == owner) {
+			file_index = i;
+			_files[i].owner = 0;
+			_files[i].last_page = 0;
+			_files[i].offset = 0;
+			_files[i].size = 0;
+			break;
+		}
+	}
+
+	for (uint8_t i = file_index; i < _num_of_files - 1; ++i) {
+		_files[i].owner = _files[i + 1].owner;
+		_files[i].last_page = _files[i + 1].last_page;
+		_files[i].offset = _files[i + 1].offset;
+		_files[i].size = _files[i + 1].size;
+	}
+
+	_num_of_files--;
+
 	uint32_t meta_count = 0;
 	uint32_t page_index = SFS_META_BLOCKS_START;
 	for (; ;) {
@@ -127,7 +156,7 @@ void SFS_delete(const char *file_name) {
 
 		bool is_over = false;
 		for (uint16_t j = 0; j < 512; ) {
-			if (meta_count == _num_of_pages) {
+			if (meta_count == _num_of_pages + 1) {
 				is_over = true;
 				break;
 			}
@@ -139,6 +168,9 @@ void SFS_delete(const char *file_name) {
 			j += 4;
 			memcpy(&meta_data.crc, _page + j, 4);
 			j += 4;
+
+			if (meta_data.owner == 0) continue;
+
 			meta_count++;
 
 			if (meta_data.owner == owner) {
@@ -150,6 +182,19 @@ void SFS_delete(const char *file_name) {
 
 		if (is_over) break;
 	}
+
+	read_page(0, _page);
+	memcpy(_page, &_num_of_pages, 4);
+	write_page(0, _page);
+}
+
+void SFS_delete_all() {
+	_num_of_files = 0;
+	_num_of_pages = 0;
+
+	read_page(0, _page);
+	memcpy(_page, &_num_of_pages, 4);
+	write_page(0, _page);
 }
 
 uint64_t SFS_size(const char *file_name) {
@@ -160,6 +205,16 @@ uint64_t SFS_size(const char *file_name) {
 	}
 
 	return 0;
+}
+
+bool SFS_exists(const char *file_name) {
+	uint32_t owner = file_name_to_owner(file_name);
+
+	for (uint8_t i = 0; i < _num_of_files; ++i) {
+		if (_files[i].owner == owner) return true;
+	}
+
+	return false;
 }
 
 void SFS_write(const char *file_name, uint8_t *buffer, uint32_t data_len) {
@@ -272,6 +327,7 @@ void SFS_read(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_
 			j += 4;
 			memcpy(&meta_data.crc, _page + j, 4);
 			j += 4;
+			if (meta_data.owner == 0) continue;
 			meta_count++;
 
 
@@ -326,6 +382,7 @@ void SFS_defragment() {
 			j += 4;
 			memcpy(&meta_data.crc, _page + j, 4);
 			j += 4;
+			if (meta_data.owner == 0) continue;
 			meta_count++;
 
 
@@ -418,6 +475,8 @@ static void delete_page(uint32_t page) {
 	memcpy(_page + meta_offset, &owner, 4);
 
 	write_page(SFS_META_BLOCKS_START + meta_page, _page);
+
+	_num_of_pages--;
 }
 
 static void move_page(uint32_t src_page, uint32_t dest_page) {
@@ -486,6 +545,7 @@ static uint32_t get_next_taken_page(uint32_t start_page) {
 			j += 4;
 			memcpy(&meta_data.crc, _page + j, 4);
 			j += 4;
+			if (meta_data.owner == 0) continue;
 			meta_count++;
 
 
