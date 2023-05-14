@@ -80,14 +80,34 @@ This function deletes the file from the system.
 void SFS_delete(const char *file_name);
 ```
 
+This function deletes all the files from the system.
+```c
+void SFS_delete_all();
+```
+
 This function returns the size of a file.
 ```c
 uint64_t SFS_size(const char *file_name);
 ```
 
+This function returns true if the file exists.
+```c
+bool SFS_exists(const char *file_name);
+```
+
+This function deletes all the files from the system.
+```c
+void SFS_delete_all();
+```
+
 This function is used to write to a file.
 ```c
 void SFS_write(const char *file_name, uint8_t *buffer, uint32_t data_len);
+```
+
+This function is used to write to a file at a specific offset. Offset + data_len must not be bigger than the file size. The reason for this is that the function was made in a hurry and will be completed if this library proves to be usefull to people.
+```c
+void SFS_write_to_offset(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_t offset);
 ```
 
 This function is used to read from a file at specified offset.
