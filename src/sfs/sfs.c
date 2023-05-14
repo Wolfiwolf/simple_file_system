@@ -52,16 +52,10 @@ static uint32_t _num_of_files;
 
 
 void SFS_init() {
-	{
-		uint8_t buff[512];
-		for (uint16_t i = 0; i < 512; ++i) {
-			buff[i] = 0;
-		}
-		// write_page(0, buff);
-	}
 	read_page(0, _page);
 	memcpy(&_num_of_pages, _page, 4);
 
+	_num_of_pages = 0;
 	_num_of_files = 0;
 
 	uint32_t meta_count = 0;
@@ -269,11 +263,93 @@ void SFS_write(const char *file_name, uint8_t *buffer, uint32_t data_len) {
 	}
 
 
-	for (uint8_t i = 0; i < _num_of_files; ++i) {
-		if (_files[i].owner == owner)  {
-			_files[i].size += data_len;
-			break;
+	_files[file_index].size += data_len;
+}
+
+void SFS_write_to_offset(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_t offset) {
+	uint32_t owner = file_name_to_owner(file_name);
+
+	uint32_t first_page = offset / SFS_PAGE_SIZE;
+	uint32_t first_page_offset = offset % SFS_PAGE_SIZE;
+	uint32_t first_page_size = SFS_PAGE_SIZE - first_page_offset;
+
+	uint32_t last_page = (offset + data_len) / SFS_PAGE_SIZE;
+	uint32_t last_page_size = (offset + data_len) % SFS_PAGE_SIZE;
+
+	if (last_page_size == 0) {
+		last_page--;
+		last_page_size = 512;
+	}
+
+	uint32_t num_of_middle_pages = (data_len - first_page_size - last_page_size) / 512;
+
+
+	if (first_page == last_page) {
+		first_page_size = data_len;
+		last_page_size = 0;
+		num_of_middle_pages = 0;
+	}
+
+
+	uint32_t file_page_count = 0;
+	uint8_t reading_page[512];
+	bool start_middle = false;
+	uint32_t middle_count = 0;
+
+	uint32_t meta_count = 0;
+	uint32_t page_index = SFS_META_BLOCKS_START;
+	for (; ;) {
+		read_page(page_index, _page);
+		struct BlockMetaData meta_data;
+
+		bool is_over = false;
+		for (uint16_t j = 0; j < 512; ) {
+			if (meta_count == _num_of_pages) {
+				is_over = true;
+				break;
+			}
+			memcpy(&meta_data.page, _page + j, 4);
+			j += 4;
+			memcpy(&meta_data.owner, _page + j, 4);
+			j += 4;
+			memcpy(&meta_data.size_taken, _page + j, 4);
+			j += 4;
+			memcpy(&meta_data.crc, _page + j, 4);
+			j += 4;
+			meta_count++;
+
+
+			if (meta_data.owner == owner) {
+				if (file_page_count == first_page) {
+					read_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
+					memcpy(reading_page + first_page_offset, buffer, first_page_size);
+					write_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
+
+					if (num_of_middle_pages == 0) {
+						is_over = true;
+					} else {
+						start_middle = true;
+					}
+				} else if (file_page_count == last_page) {
+					read_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
+					memcpy(reading_page, buffer + first_page_size + middle_count * SFS_PAGE_SIZE, last_page_size);
+					write_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
+					start_middle = false;
+					is_over = true;
+				} else if (start_middle) {
+					read_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
+					memcpy(reading_page, buffer + first_page_size + middle_count * SFS_PAGE_SIZE, SFS_PAGE_SIZE);
+					write_page(SFS_DATA_BLOCKS_START + meta_data.page, reading_page);
+					middle_count++;
+				}
+
+				file_page_count++;
+			}
+
 		}
+		page_index++;
+
+		if (is_over) break;
 	}
 }
 
@@ -300,6 +376,12 @@ void SFS_read(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_
 		last_page_size = 0;
 		num_of_middle_pages = 0;
 	}
+
+	printf("first_page: %d\n", first_page);
+	printf("last_page: %d\n", last_page);
+	printf("num_of_middle_pages: %d\n", num_of_middle_pages);
+	printf("first_page_size: %d\n", first_page_size);
+	printf("first_page_offset: %d\n", first_page_offset);
 
 
 	uint32_t file_page_count = 0;
