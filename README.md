@@ -105,7 +105,7 @@ This function is used to write to a file.
 void SFS_write(const char *file_name, uint8_t *buffer, uint32_t data_len);
 ```
 
-This function is used to write to a file at a specific offset. Offset + data_len must not be bigger than the file size. The reason for this is that the function was made in a hurry and will be completed if this library proves to be usefull to people.
+This function is used to write to a file at a specific offset. 
 ```c
 void SFS_write_to_offset(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_t offset);
 ```

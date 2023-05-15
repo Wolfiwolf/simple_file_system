@@ -269,23 +269,26 @@ void SFS_write(const char *file_name, uint8_t *buffer, uint32_t data_len) {
 void SFS_write_to_offset(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_t offset) {
 	uint32_t owner = file_name_to_owner(file_name);
 
+	uint32_t overwrite_data_len = SFS_size(file_name) - offset;
+	uint32_t add_data_len = data_len - overwrite_data_len;
+
 	uint32_t first_page = offset / SFS_PAGE_SIZE;
 	uint32_t first_page_offset = offset % SFS_PAGE_SIZE;
 	uint32_t first_page_size = SFS_PAGE_SIZE - first_page_offset;
 
-	uint32_t last_page = (offset + data_len) / SFS_PAGE_SIZE;
-	uint32_t last_page_size = (offset + data_len) % SFS_PAGE_SIZE;
+	uint32_t last_page = (offset + overwrite_data_len) / SFS_PAGE_SIZE;
+	uint32_t last_page_size = (offset + overwrite_data_len) % SFS_PAGE_SIZE;
 
 	if (last_page_size == 0) {
 		last_page--;
 		last_page_size = 512;
 	}
 
-	uint32_t num_of_middle_pages = (data_len - first_page_size - last_page_size) / 512;
+	uint32_t num_of_middle_pages = (overwrite_data_len - first_page_size - last_page_size) / 512;
 
 
 	if (first_page == last_page) {
-		first_page_size = data_len;
+		first_page_size = overwrite_data_len;
 		last_page_size = 0;
 		num_of_middle_pages = 0;
 	}
@@ -351,6 +354,8 @@ void SFS_write_to_offset(const char *file_name, uint8_t *buffer, uint32_t data_l
 
 		if (is_over) break;
 	}
+
+	SFS_write(file_name, buffer + overwrite_data_len, add_data_len);
 }
 
 void SFS_read(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_t offset) {
@@ -376,12 +381,6 @@ void SFS_read(const char *file_name, uint8_t *buffer, uint32_t data_len, uint64_
 		last_page_size = 0;
 		num_of_middle_pages = 0;
 	}
-
-	printf("first_page: %d\n", first_page);
-	printf("last_page: %d\n", last_page);
-	printf("num_of_middle_pages: %d\n", num_of_middle_pages);
-	printf("first_page_size: %d\n", first_page_size);
-	printf("first_page_offset: %d\n", first_page_offset);
 
 
 	uint32_t file_page_count = 0;

@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 		read_data[i] = 0;
 	}
 
-	SFS_write("test", data, 8);
+	SFS_write("test", data, 4);
 	SFS_read("test", read_data, 8, 0);
 
 	for (uint8_t i = 0; i < 8; ++i) {
@@ -25,8 +25,8 @@ int main(int argc, char *argv[]) {
 	}
 	printf("\n");
 
-	for (uint8_t i = 0; i < 4; ++i) data[i + 4] = i;
-	SFS_write_to_offset("test", data, 8, 4);
+	for (uint8_t i = 0; i < 6; ++i) data[i] = i;
+	SFS_write_to_offset("test", data, 6, 2);
 
 	SFS_read("test", read_data, 8, 0);
 
